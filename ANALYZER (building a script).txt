@@ -1,0 +1,351 @@
+from urllib.parse import urlparse
+
+
+def get_domain(url):
+    """Get the domain name from a URL."""
+    try:
+        domain = urlparse(url).hostname
+
+        if domain:
+            return domain.lower()
+
+        return ""
+
+    except ValueError:
+        return ""
+
+
+def analyze_email(sender, subject, message,
+                  displayed_url, actual_url, final_url):
+
+    risk_score = 0
+    warnings = []
+
+    # --------------------------------
+    # CHECK 1: SENDER
+    # --------------------------------
+
+    if "@" not in sender:
+        risk_score += 20
+        warnings.append(
+            "Sender email address looks suspicious."
+        )
+
+    # --------------------------------
+    # CHECK 2: EMAIL CONTENT
+    # --------------------------------
+
+    suspicious_words = [
+        "urgent",
+        "immediately",
+        "verify your account",
+        "password",
+        "click here",
+        "account suspended"
+    ]
+
+    email_text = (subject + " " + message).lower()
+
+    for word in suspicious_words:
+        if word in email_text:
+            risk_score += 10
+            warnings.append(
+                "Suspicious phrase found: " + word
+            )
+
+    # --------------------------------
+    # CHECK 3: HTTP VS HTTPS
+    # --------------------------------
+
+    if actual_url.startswith("http://"):
+        risk_score += 20
+        warnings.append(
+            "The actual link does not use HTTPS."
+        )
+
+    # --------------------------------
+    # GET THE DOMAINS
+    # --------------------------------
+
+    displayed_domain = get_domain(displayed_url)
+    actual_domain = get_domain(actual_url)
+    final_domain = get_domain(final_url)
+
+    # --------------------------------
+    # CHECK 4:
+    # DISPLAYED LINK VS ACTUAL LINK
+    # --------------------------------
+
+    if displayed_domain and actual_domain:
+
+        if displayed_domain != actual_domain:
+            risk_score += 30
+
+            warnings.append(
+                "Displayed link does not match "
+                "the actual hyperlink."
+            )
+
+    # --------------------------------
+    # CHECK 5:
+    # ACTUAL LINK VS FINAL DESTINATION
+    # --------------------------------
+
+    if actual_domain and final_domain:
+
+        if actual_domain != final_domain:
+            risk_score += 30
+
+            warnings.append(
+                "The link redirects to a "
+                "different domain."
+            )
+
+    # --------------------------------
+    # DETERMINE RISK LEVEL
+    # --------------------------------
+
+    if risk_score >= 50:
+        risk_level = "HIGH RISK"
+
+    elif risk_score >= 20:
+        risk_level = "SUSPICIOUS"
+
+    else:
+        risk_level = "LEGITIMATE"
+
+    # --------------------------------
+    # RETURN RESULTS
+    # --------------------------------
+
+    return {
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "displayed_domain": displayed_domain,
+        "actual_domain": actual_domain,
+        "final_domain": final_domain,
+        "warnings": warnings
+    }
+
+
+# ==================================
+# TEST CURRIE DEFENSE
+# ==================================
+
+result = analyze_email(
+
+    sender="security@example.com",
+
+    subject="URGENT - Verify Your Account",
+
+    message=(
+        "Your account has been suspended. "
+        "Click here immediately to verify your account."
+    ),
+
+    # What the person sees
+    displayed_url="https://example.com",
+
+    # Link stored inside the email
+    actual_url="https://example.com",
+
+    # Where the link eventually sends the person
+    final_url="https://different-example.com"
+)
+
+
+# ==================================
+# DISPLAY RESULTS
+# ==================================
+
+print("Risk Score:", result["risk_score"])
+
+print("Risk Level:", result["risk_level"])
+
+print(
+    "Displayed Domain:",
+    result["displayed_domain"]
+)
+
+print(
+    "Actual Domain:",
+    result["actual_domain"]
+)
+
+print(
+    "Final Destination:",
+    result["final_domain"]
+)
+
+print("Warnings:")
+
+for warning in result["warnings"]:
+    print("-", warning)
+
+ # Test Currie Defense
+result = analyze_email(
+    sender="security@example.com",
+    subject="URGENT - Verify Your Account",
+    message="Your account has been suspended. Click here immediately to verify your account.",
+    url="http://example.com"
+)
+
+print("Risk Score:", result["risk_score"])
+print("Risk Level:", result["risk_level"])
+print("Warnings:")
+
+for warning in result["warnings"]:
+    print("-", warning)
+
+# ==========================================
+# CURRIE DEFENSE - CONTROL VARIABLE TEST
+# ==========================================
+
+print("=== CONTROL TEST ===")
+
+control_result = analyze_email(
+    sender="helpdesk@example.com",
+    subject="Account Information",
+    message="Please review your account information.",
+    displayed_url="https://example.com",
+    actual_url="https://example.com",
+    final_url="https://example.com"
+)
+
+print("Risk Score:", control_result["risk_score"])
+print("Risk Level:", control_result["risk_level"])
+print("Displayed Domain:", control_result["displayed_domain"])
+print("Actual Domain:", control_result["actual_domain"])
+print("Final Destination:", control_result["final_domain"])
+
+print("Warnings:")
+
+for warning in control_result["warnings"]:
+    print("-", warning)
+
+
+print("\n=== REDIRECT VARIABLE TEST ===")
+
+redirect_result = analyze_email(
+    sender="helpdesk@example.com",
+    subject="Account Information",
+    message="Please review your account information.",
+    displayed_url="https://example.com",
+    actual_url="https://example.com",
+
+    # ONLY THIS VARIABLE CHANGES
+    final_url="https://different-example.com"
+)
+
+print("Risk Score:", redirect_result["risk_score"])
+print("Risk Level:", redirect_result["risk_level"])
+print("Displayed Domain:", redirect_result["displayed_domain"])
+print("Actual Domain:", redirect_result["actual_domain"])
+print("Final Destination:", redirect_result["final_domain"])
+
+print("Warnings:")
+
+for warning in redirect_result["warnings"]:
+    print("-", warning)   
+
+    # ==========================================
+# CURRIE DEFENSE - CONTROL VARIABLE TEST
+# ==========================================
+
+print("=== CONTROL TEST ===")
+
+control_test = analyze_email(
+    sender="helpdesk@example.com",
+    subject="Account Information",
+    message="Please review your account information.",
+    displayed_url="https://example.com",
+    actual_url="https://example.com",
+    final_url="https://example.com"
+)
+
+print("Risk Score:", control_test["risk_score"])
+print("Risk Level:", control_test["risk_level"])
+print("Displayed Domain:", control_test["displayed_domain"])
+print("Actual Domain:", control_test["actual_domain"])
+print("Final Destination:", control_test["final_domain"])
+
+print("Warnings:")
+
+for warning in control_test["warnings"]:
+    print("-", warning)
+
+
+# ==========================================
+# CHANGE ONE VARIABLE: FINAL DESTINATION
+# ==========================================
+
+print("\n=== CHANGED VARIABLE TEST ===")
+
+changed_test = analyze_email(
+    sender="helpdesk@example.com",
+    subject="Account Information",
+    message="Please review your account information.",
+    displayed_url="https://example.com",
+    actual_url="https://example.com",
+
+    # This is the ONLY variable changed
+    final_url="https://different-example.com"
+)
+
+print("Risk Score:", changed_test["risk_score"])
+print("Risk Level:", changed_test["risk_level"])
+print("Displayed Domain:", changed_test["displayed_domain"])
+print("Actual Domain:", changed_test["actual_domain"])
+print("Final Destination:", changed_test["final_domain"])
+
+print("Warnings:")
+
+for warning in changed_test["warnings"]:
+    print("-", warning)
+
+    # ==========================================
+# CURRIE DEFENSE - CONTROL TEST
+# ==========================================
+
+control_result = analyze_email(
+    sender="teacher@example.com",
+
+    subject="Class Schedule Reminder",
+
+    message=(
+        "Hello, this is a reminder that our class "
+        "will meet tomorrow at the regular scheduled time."
+    ),
+
+    displayed_url="https://example.com",
+
+    actual_url="https://example.com",
+
+    final_url="https://example.com"
+)
+
+
+print("=== CURRIE DEFENSE CONTROL TEST ===")
+
+print("Risk Score:", control_result["risk_score"])
+print("Risk Level:", control_result["risk_level"])
+
+print(
+    "Displayed Domain:",
+    control_result["displayed_domain"]
+)
+
+print(
+    "Actual Domain:",
+    control_result["actual_domain"]
+)
+
+print(
+    "Final Destination:",
+    control_result["final_domain"]
+)
+
+print("Warnings:")
+
+for warning in control_result["warnings"]:
+    print("-", warning)
